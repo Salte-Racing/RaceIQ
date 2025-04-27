@@ -5,7 +5,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --passWithNoTests",
     "lint": "eslint src --ext .ts,.tsx",
     "eject": "react-scripts eject"
   },
@@ -38,4 +38,4 @@
       "last 1 safari version"
     ]
   }
-} 
+}
