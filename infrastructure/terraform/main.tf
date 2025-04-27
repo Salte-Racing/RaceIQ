@@ -5,19 +5,21 @@ terraform {
       version = "~> 4.0"
     }
   }
-  backend "s3" {
-    bucket = "your-terraform-state-bucket"
-    key    = "terraform.tfstate"
-  }
+  backend "s3" {}
+}
+
+variable "region" {
+  description = "AWS region to deploy resources"
+  type        = string
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
 }
 
 # S3 bucket for frontend
 resource "aws_s3_bucket" "frontend" {
-  bucket = "your-frontend-bucket-${terraform.workspace}"
+  bucket = "raceiq-frontend-${terraform.workspace}"
 }
 
 resource "aws_s3_bucket_website_configuration" "frontend" {
@@ -77,14 +79,14 @@ resource "aws_cloudfront_origin_access_identity" "frontend" {
 
 # API Gateway
 resource "aws_apigatewayv2_api" "backend" {
-  name          = "backend-api-${terraform.workspace}"
+  name          = "raceiq-backend-${terraform.workspace}"
   protocol_type = "HTTP"
 }
 
 # Lambda function
 resource "aws_lambda_function" "backend" {
   filename         = "../../backend/dist/lambda.zip"
-  function_name    = "backend-${terraform.workspace}"
+  function_name    = "raceiq-backend-${terraform.workspace}"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = "nodejs18.x"
@@ -98,7 +100,7 @@ resource "aws_lambda_function" "backend" {
 
 # IAM role for Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "lambda-role-${terraform.workspace}"
+  name = "raceiq-lambda-role-${terraform.workspace}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

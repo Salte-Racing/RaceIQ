@@ -4,6 +4,19 @@ on:
   push:
     branches:
       - '**'  # This will match any branch
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS Region to deploy to (optional)'
+        required: false
+        type: string
+        default: ''
+
+env:
+  AWS_REGION: ${{ inputs.region || vars.AWS_REGION }}
+  TERRAFORM_BACKEND_BUCKET: ${{ vars.TERRAFORM_BACKEND_BUCKET }}
+  TERRAFORM_BACKEND_KMS_KEY: ${{ vars.TERRAFORM_BACKEND_KMS_KEY }}
+  TERRAFORM_BACKEND_DYNAMODB_TABLE: ${{ vars.TERRAFORM_BACKEND_DYNAMODB_TABLE }}
 
 jobs:
   build-and-test:
@@ -41,7 +54,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -51,7 +64,13 @@ jobs:
       - name: Terraform Init
         run: |
           cd infrastructure/terraform
-          terraform init
+          terraform init \
+            -backend-config="bucket=${{ env.TERRAFORM_BACKEND_BUCKET }}" \
+            -backend-config="key=${{ github.repository }}/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="kms_key_id=${{ env.TERRAFORM_BACKEND_KMS_KEY }}" \
+            -backend-config="dynamodb_table=${{ env.TERRAFORM_BACKEND_DYNAMODB_TABLE }}"
 
       - name: Select/Create Terraform Workspace
         run: |
@@ -62,7 +81,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd infrastructure/terraform
-          terraform apply -auto-approve
+          terraform apply -auto-approve -var="region=${{ env.AWS_REGION }}"
 
   smoke-test:
     needs: deploy
