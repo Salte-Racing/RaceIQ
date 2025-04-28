@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
   backend "s3" {}
 }
@@ -85,7 +89,8 @@ resource "aws_apigatewayv2_api" "backend" {
 
 # Lambda function
 resource "aws_lambda_function" "backend" {
-  filename         = "../../backend/dist/lambda.zip"
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   function_name    = "raceiq-backend-${terraform.workspace}"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
@@ -96,6 +101,13 @@ resource "aws_lambda_function" "backend" {
       ENVIRONMENT = terraform.workspace
     }
   }
+}
+
+# Archive the Lambda function code
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../backend/dist"
+  output_path = "${path.module}/lambda.zip"
 }
 
 # IAM role for Lambda

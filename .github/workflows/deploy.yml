@@ -56,6 +56,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Build backend
+        run: |
+          cd backend
+          npm ci
+          npm run build
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
