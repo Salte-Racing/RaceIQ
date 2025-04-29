@@ -8,7 +8,7 @@
     "test": "react-scripts test --passWithNoTests",
     "lint": "eslint src --ext .ts,.tsx",
     "eject": "react-scripts eject",
-    "build:backend": "tsc -p tsconfig.json --outDir dist/backend src/backend",
+    "build:backend": "tsc -p tsconfig.backend.json",
     "start:backend": "node dist/backend/index.js",
     "dev:backend": "ts-node-dev --respawn src/backend/index.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss}\" \"backend/**/*.{ts,tsx,js,jsx,json}\""
