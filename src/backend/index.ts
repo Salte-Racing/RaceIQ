@@ -1,19 +1,25 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
-dotenv.config();
-
-const app = express();
-const port = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
+    console.log('Received event:', JSON.stringify(event, null, 2));
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: 'Hello from Lambda!',
+        environment: process.env.ENVIRONMENT,
+      }),
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: 'Internal server error',
+      }),
+    };
+  }
+};
