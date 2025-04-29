@@ -65,7 +65,7 @@ jobs:
       - name: Build backend
         run: |
           cd backend
-          npm ci
+          npm install
           npm run build
 
       - name: Setup Terraform
