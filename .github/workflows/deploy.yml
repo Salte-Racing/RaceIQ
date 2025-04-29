@@ -46,6 +46,9 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: "!startsWith(github.ref, 'refs/heads/fix/') && !startsWith(github.ref, 'refs/heads/feature/')"
+    outputs:
+      frontend_url: ${{ steps.terraform-output.outputs.frontend_url }}
+      api_url: ${{ steps.terraform-output.outputs.api_url }}
     steps:
       - uses: actions/checkout@v3
 
@@ -95,6 +98,13 @@ jobs:
           cd infrastructure/terraform
           terraform apply -auto-approve -var="region=${{ env.AWS_REGION }}"
 
+      - name: Get Terraform outputs
+        id: terraform-output
+        run: |
+          cd infrastructure/terraform
+          echo "frontend_url=$(terraform output -raw frontend_url)" >> $GITHUB_OUTPUT
+          echo "api_url=$(terraform output -raw api_url)" >> $GITHUB_OUTPUT
+
       - name: Build frontend
         run: npm run build
 
@@ -142,4 +152,5 @@ jobs:
           cd tests/selenium
           npm test
         env:
-          APP_URL: ${{ steps.terraform-output.outputs.frontend_url }}
+          APP_URL: ${{ needs.deploy.outputs.frontend_url }}
+          API_URL: ${{ needs.deploy.outputs.api_url }}
