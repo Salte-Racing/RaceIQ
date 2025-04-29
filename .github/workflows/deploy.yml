@@ -62,11 +62,11 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build backend
-        run: |
-          cd backend
-          npm ci
-          npm run build
+        run: npm run build:backend
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -94,6 +94,30 @@ jobs:
         run: |
           cd infrastructure/terraform
           terraform apply -auto-approve -var="region=${{ env.AWS_REGION }}"
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Get S3 bucket name
+        id: s3-bucket
+        run: |
+          cd infrastructure/terraform
+          BUCKET_NAME=$(terraform output -raw frontend_bucket_name)
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload frontend to S3
+        run: |
+          aws s3 sync build/ s3://${{ steps.s3-bucket.outputs.bucket_name }} \
+            --delete \
+            --cache-control "max-age=31536000,public" \
+            --exclude "index.html" \
+            --exclude "*.json"
+          aws s3 cp build/index.html s3://${{ steps.s3-bucket.outputs.bucket_name }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+          aws s3 cp build/manifest.json s3://${{ steps.s3-bucket.outputs.bucket_name }}/manifest.json \
+            --cache-control "no-cache,no-store,must-revalidate" \
+            --content-type "application/json"
 
   smoke-test:
     needs: deploy

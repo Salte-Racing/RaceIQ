@@ -160,3 +160,7 @@ output "frontend_url" {
 output "api_url" {
   value = aws_apigatewayv2_api.backend.api_endpoint
 }
+
+output "frontend_bucket_name" {
+  value = aws_s3_bucket.frontend.id
+}
