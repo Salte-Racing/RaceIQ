@@ -45,7 +45,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: "!startsWith(github.ref, 'refs/heads/fix/') && !startsWith(github.ref, 'refs/heads/feature/')"
+    if: ${{ !startsWith(github.ref, 'refs/heads/fix/') && !startsWith(github.ref, 'refs/heads/feature/') }}
     outputs:
       frontend_url: ${{ steps.terraform-output.outputs.frontend_url }}
       api_url: ${{ steps.terraform-output.outputs.api_url }}
@@ -102,8 +102,12 @@ jobs:
         id: terraform-output
         run: |
           cd infrastructure/terraform
-          echo "frontend_url=$(terraform output -raw frontend_url)" >> $GITHUB_OUTPUT
-          echo "api_url=$(terraform output -raw api_url)" >> $GITHUB_OUTPUT
+          FRONTEND_URL=$(terraform output -raw frontend_url)
+          API_URL=$(terraform output -raw api_url)
+          echo "frontend_url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+          echo "api_url=${API_URL}" >> $GITHUB_OUTPUT
+          echo "Frontend URL: ${FRONTEND_URL}"
+          echo "API URL: ${API_URL}"
 
       - name: Build frontend
         run: npm run build
@@ -113,7 +117,8 @@ jobs:
         run: |
           cd infrastructure/terraform
           BUCKET_NAME=$(terraform output -raw frontend_bucket_name)
-          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+          echo "S3 Bucket: ${BUCKET_NAME}"
 
       - name: Upload frontend to S3
         run: |
@@ -132,7 +137,7 @@ jobs:
   smoke-test:
     needs: deploy
     runs-on: ubuntu-latest
-    if: "!startsWith(github.ref, 'refs/heads/fix/') && !startsWith(github.ref, 'refs/heads/feature/')"
+    if: ${{ !startsWith(github.ref, 'refs/heads/fix/') && !startsWith(github.ref, 'refs/heads/feature/') }}
     steps:
       - uses: actions/checkout@v3
 
