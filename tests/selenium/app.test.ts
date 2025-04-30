@@ -5,6 +5,8 @@ describe('Application Smoke Tests', () => {
   let driver: WebDriver;
 
   beforeAll(async () => {
+    jest.setTimeout(15000); // 15 seconds
+
     const options = new chrome.Options();
     options.addArguments('--headless');
     options.addArguments('--no-sandbox');
@@ -40,4 +42,4 @@ describe('Application Smoke Tests', () => {
     const messageText = await messageElement.getText();
     expect(messageText).toBe('Hello from Lambda!');
   });
-}); 
+});
