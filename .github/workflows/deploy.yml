@@ -102,6 +102,7 @@ jobs:
         id: terraform-output
         run: |
           cd infrastructure/terraform
+          terraform output -raw frontend_url
           FRONTEND_URL=$(terraform output -raw frontend_url)
           API_URL=$(terraform output -raw api_url)
           echo "frontend_url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
