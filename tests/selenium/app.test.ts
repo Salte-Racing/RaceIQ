@@ -32,7 +32,7 @@ describe('Application Smoke Tests', () => {
       5000
     );
     const welcomeText = await welcomeElement.getText();
-    expect(welcomeText).toBe('Welcome to Your App');
+    expect(welcomeText).toBe('RaceIQ');
 
     // Wait for the API response to be displayed
     const messageElement = await driver.wait(
