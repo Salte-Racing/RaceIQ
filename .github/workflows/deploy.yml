@@ -149,12 +149,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd tests/selenium
+          cd tests/smoke
           npm ci
 
-      - name: Run Selenium tests
+      - name: Run Smoke tests
         run: |
-          cd tests/selenium
+          cd tests/smoke
           npm test
         env:
           APP_URL: ${{ needs.deploy.outputs.frontend_url }}

@@ -22,7 +22,7 @@ describe('Application Smoke Tests', () => {
     await driver.quit();
   });
 
-  it('should load the application and display welcome message', async () => {
+  it('should load the application and display the application title', async () => {
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     await driver.get(appUrl);
 

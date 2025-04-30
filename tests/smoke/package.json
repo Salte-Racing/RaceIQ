@@ -6,6 +6,7 @@
     "test": "jest --config jest.config.js --detectOpenHandles"
   },
   "dependencies": {
+    "axios": "^1.9.0",
     "selenium-webdriver": "^4.8.1"
   },
   "devDependencies": {
