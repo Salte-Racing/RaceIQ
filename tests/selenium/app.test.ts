@@ -1,12 +1,12 @@
 import { Builder, By, until, WebDriver } from 'selenium-webdriver';
 import chrome from 'selenium-webdriver/chrome';
 
+jest.setTimeout(15000); // 15 seconds
+
 describe('Application Smoke Tests', () => {
   let driver: WebDriver;
 
   beforeAll(async () => {
-    jest.setTimeout(15000); // 15 seconds
-
     const options = new chrome.Options();
     options.addArguments('--headless');
     options.addArguments('--no-sandbox');
