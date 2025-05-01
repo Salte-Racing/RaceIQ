@@ -1,27 +1,6 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-    archive = {
-      source  = "hashicorp/archive"
-      version = "~> 2.0"
-    }
-  }
-  backend "s3" {}
-}
-
-variable "region" {
-  description = "AWS region to deploy resources"
-  type        = string
-}
-
-provider "aws" {
-  region = var.region
-}
-
-# S3 bucket for frontend
+# ------------------------------------------------------------------------------
+# Front End
+# ------------------------------------------------------------------------------
 resource "aws_s3_bucket" "frontend" {
   bucket = "raceiq-frontend-${terraform.workspace}"
 }
@@ -50,7 +29,6 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 }
 
-# CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
@@ -105,38 +83,17 @@ resource "aws_cloudfront_origin_access_identity" "frontend" {
   comment = "OAI for ${aws_s3_bucket.frontend.id}"
 }
 
-# API Gateway
-resource "aws_apigatewayv2_api" "backend" {
-  name          = "raceiq-backend-${terraform.workspace}"
-  protocol_type = "HTTP"
-}
-
-# Lambda function
-resource "aws_lambda_function" "backend" {
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  function_name    = "raceiq-backend-${terraform.workspace}"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "index.handler"
-  runtime         = "nodejs18.x"
-
-  environment {
-    variables = {
-      ENVIRONMENT = terraform.workspace
-    }
-  }
-}
-
-# Archive the Lambda function code
+# ------------------------------------------------------------------------------
+# Backend Lambda
+# ------------------------------------------------------------------------------
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../dist/backend"
   output_path = "${path.module}/lambda.zip"
 }
 
-# IAM role for Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "raceiq-lambda-role-${terraform.workspace}"
+  name = "raceiq-lambda-${terraform.workspace}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -152,15 +109,78 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
-# Outputs
-output "frontend_url" {
-  value = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+resource "aws_lambda_function" "backend" {
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  function_name    = "raceiq-backend-${terraform.workspace}"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "index.handler"
+  runtime         = "nodejs18.x"
+
+  environment {
+    variables = {
+      ENVIRONMENT = terraform.workspace
+    }
+  }
 }
 
-output "api_url" {
-  value = aws_apigatewayv2_api.backend.api_endpoint
+# ------------------------------------------------------------------------------
+# Backend API Gateway Service
+# ------------------------------------------------------------------------------
+resource "aws_iam_role" "api_gateway_role" {
+  name = "raceiq-api-gateway-${terraform.workspace}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
 }
 
-output "frontend_bucket_name" {
-  value = aws_s3_bucket.frontend.id
+resource "aws_iam_role_policy_attachment" "backend" {
+  role       = aws_iam_role.api_gateway_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_apigatewayv2_api" "backend" {
+  name          = "raceiq-backend-${terraform.workspace}"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_integration" "backend" {
+  api_id           = aws_apigatewayv2_api.backend.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.backend.invoke_arn
+  integration_method = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "backend" {
+  for_each = toset(local.methods)
+
+  api_id    = aws_apigatewayv2_api.backend.id
+  route_key = "${each.value} /cars"
+  target    = "integrations/${aws_apigatewayv2_integration.backend.id}"
+}
+
+resource "aws_apigatewayv2_stage" "backend" {
+  api_id      = aws_apigatewayv2_api.backend.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+resource "aws_lambda_permission" "backend" {
+  for_each = toset(local.methods)
+
+  statement_id  = "AllowAPIGatewayInvoke-${each.value}"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.backend.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.backend.execution_arn}/*/*/cars"
 }
