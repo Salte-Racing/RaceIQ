@@ -2,15 +2,15 @@ import axios from 'axios';
 import https from 'https';
 
 describe('API Smoke Tests', () => {
-  it('GET /status returns 200', async () => {
+  it('GET /cars returns 200', async () => {
     const apiUrl = process.env.API_URL || 'http://localhost:3000';
 
     const agent = new https.Agent({ keepAlive: false });
 
-    const response = await axios.get(apiUrl, { httpsAgent: agent });
+    const response = await axios.get(`${apiUrl}/cars`, { httpsAgent: agent });
 
     expect(response.status).toBe(200);
-    expect(response.data.message).toBe('OK');
+    expect(response.data.message).toBe('Hello from Lambda!');
 
     agent.destroy(); // optional but helpful for aggressive cleanup
   });

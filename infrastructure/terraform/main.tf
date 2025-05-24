@@ -184,3 +184,18 @@ resource "aws_lambda_permission" "backend" {
 
   source_arn = "${aws_apigatewayv2_api.backend.execution_arn}/*/*/cars"
 }
+
+resource "aws_apigatewayv2_deployment" "backend" {
+  api_id      = aws_apigatewayv2_api.backend.id
+
+  triggers = {
+    redeployment = sha1(join(",", tolist([
+      jsonencode(aws_apigatewayv2_integration.backend),
+      jsonencode(aws_apigatewayv2_route.backend)
+    ])))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
